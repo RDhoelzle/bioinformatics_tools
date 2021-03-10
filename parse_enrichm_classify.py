@@ -87,11 +87,9 @@ def main(tsv):
 
     print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"),'Writing output files')
 
-    #separate missing and complete columns and clean column names
+    #separate missing and complete columns
     missing_cols = [col for col in raw_df.columns if '~~missing' in col]
-    missing_cols.columns = missing_cols.columns.str.rstrip('~~missing')
     complete_cols = [col for col in raw_df.columns if '~~complete' in col]
-    complete_cols.columns = complete_cols.columns.str.rstrip('~~complete')
 
     #Write data to tsvs
     raw_df[missing_cols].to_csv('mod_steps_missing.tsv', sep='\t')
