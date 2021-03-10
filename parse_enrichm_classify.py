@@ -17,8 +17,8 @@
 
 __maintainer__ = 'Rob Hoelzle'
 __script_name__ = 'parse_enrichm_classify.py'
-__version__ = '0.0.0'
-__profiling__ = 'True'
+__version__ = '0.0.1'
+__profiling__ = 'False'
 
 import os
 import sys
@@ -36,7 +36,8 @@ from collections import defaultdict
 def make_df(file):
     """
     This function reads in the module completeness file, removes the column
-    headers, calculates the # steps missing, then generates a dictionary
+    headers, then generates a dictionary of genomes, module completeness values,
+    and calculated steps missing values
     """
     raw_data = defaultdict(list)
 
@@ -44,17 +45,17 @@ def make_df(file):
         print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"),'Reading in raw data')
         for line in file1:
             #ignore header and blank lines
-            if 'Genome_name' in line.replace('\t',''):
+            if 'Genome_name' in line.replace('\t',''): #accounts for old enrichm versions
                 continue
             elif not line.strip():
                 continue
 
-            #parse genome name
+            #add entry for each new genome name encountered
             genome = line.strip('\n').split('\t')[0]
             if genome not in raw_data['Genome']:
                 raw_data['Genome'].append(genome)
 
-            #parse module name
+            #add missing and complete keys for each new module name encountered
             module =  line.strip('\n').split('\t')[1] + ":" + line.strip('\n').split('\t')[2]
             mod_miss = module+'~~missing'
             mod_comp = module+'~~complete'
@@ -68,6 +69,7 @@ def make_df(file):
             raw_data[mod_miss].append(missing)
             raw_data[mod_comp].append(complete)
 
+    #convert dictionary to dataframe and output
     print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"),'Generating raw data frame')
     raw_df = pd.DataFrame(raw_data).set_index('Genome')
 
@@ -83,12 +85,15 @@ def make_df(file):
 def main(tsv):
     raw_df = make_df(tsv)
 
-    #Write data to tsvs
     print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"),'Writing output files')
 
+    #separate missing and complete columns and clean column names
     missing_cols = [col for col in raw_df.columns if '~~missing' in col]
+    missing_cols.columns = missing_cols.columns.str.rstrip('~~missing')
     complete_cols = [col for col in raw_df.columns if '~~complete' in col]
+    complete_cols.columns = complete_cols.columns.str.rstrip('~~complete')
 
+    #Write data to tsvs
     raw_df[missing_cols].to_csv('mod_steps_missing.tsv', sep='\t')
     raw_df[complete_cols].to_csv('mod_percent_complete.tsv', sep='\t')
 
