@@ -17,8 +17,8 @@
 
 __maintainer__ = 'Rob Hoelzle'
 __script_name__ = 'coverage_avg_var.py'
-__version__ = '0.0.0'
-__profiling__ = 'True'
+__version__ = '0.0.1'
+__profiling__ = 'False'
 
 import os
 import sys
