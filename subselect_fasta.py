@@ -51,6 +51,7 @@ def main(tsv, fasta_in, fasta_out):
     #import tsv and iterate through accession numbers
     with open(tsv, 'r') as list:
         for entry in list:
+            entry = entry.strip('\n')
             #search accession number in input fasta
             with open(fasta_in, 'r') as fasta:
                 for line in fasta:
@@ -88,11 +89,11 @@ if __name__ == '__main__':
                         help='Name of output fasta file'),
 
     args = parser.parse_args()
-    if not os.path.exists(args.tsv_list):
+    if not os.path.exists(args.tsv_file):
         print("Input list file does not exist: {}".format(args.tsv_file))
         sys.exit(-1)
     if not os.path.exists(args.i_fasta):
-        print("Input fasta file does not exist: {}".format(args.db_name))
+        print("Input fasta file does not exist: {}".format(args.i_fasta))
         sys.exit(-1)
 
     main(args.tsv_file, args.i_fasta, args.o_fasta)
