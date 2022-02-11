@@ -17,15 +17,14 @@
 
 __maintainer__ = 'Rob Hoelzle'
 __script_name__ = 'scrape_KEGG_w_cIDs.py'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __profiling__ = 'False'
 
-import io
+import os
 import re
 import sys
 import argparse
 import requests
-import tempfile
 from bs4 import BeautifulSoup
 from datetime import datetime
 
@@ -36,7 +35,6 @@ from datetime import datetime
 
 #compound names
 def scrape_names_list(cmpd_soup):
-
     """
     Builds list of compound names associated with input cID
     """
@@ -57,53 +55,36 @@ def scrape_names_list(cmpd_soup):
 
     return name_list
 
-#mapIDs and mIDs
+#mapIDs, mIDs, and rIDs
 def scrape_metab_lists(cmpd_soup):
-
     """
     Builds a list of mapIDs and mIDs associated with input cID
     """
     map_list = []
     mod_list = []
-    metabs = cmpd_soup.find_all('nobr') #mapIDs and mIDs in nobr entries
+    rxn_list = []
+    metabs = cmpd_soup.find_all('a') #mapIDs and mIDs in nobr entries
 
     for entry in metabs:
         line = str(entry)
         if "pathway" in line: #mapIDs always in format "<a href="/pathway/map####+C####">map####</a>"
-            map_list.append(line.split(">")[2].strip("</a"))
+            map_list.append(line.split(">")[1].strip("</a"))
 
         if "module" in line: #mIDs always in format "<a href="/module/m####">m####</a>"
-            mod_list.append(line.split(">")[2].strip("</a"))
+            mod_list.append(line.split(">")[1].strip("</a"))
+            
+        if re.search(r'entry/R\d{5}', line): #rIDs and ECs both have 'entry'
+            rxn_list.append(line.split(">")[1].strip("</a"))
 
     if len(map_list) == 0:
         map_list.append("NA")
     if len(mod_list) == 0:
         mod_list.append("NA")
 
-    return map_list, mod_list
-
-#rIDs
-def scrape_rxn_list(cmpd_soup):
-
-    """
-    Builds a list of rIDs associated with input cID
-    """
-    rxn_list = []
-    rxns = cmpd_soup.find_all("td", class_="td21") #rIDs in td class td21 entries
-
-    for entry in rxns:
-        line = str(entry)
-        if "entry" in line: #rIDs always in format "<a href="/entry/R####">R####</a>"
-            line_list = line.split(">")
-            for item in line_list:
-                if item.startswith("R"):
-                    rxn_list.append(item.strip("</a"))
-
-    return rxn_list
+    return map_list, mod_list, rxn_list
 
 #kIDs
 def scrape_kid_list(rxn_list, link):
-
     """
     Builds dictionary of rID entries and their list of associated kIDs
     """
@@ -138,7 +119,6 @@ def scrape_kid_list(rxn_list, link):
 ## Main script
 
 def main(cmpd_tsv, out_tsv):
-
     """
     This is what we're here to do
     """
@@ -168,14 +148,12 @@ def main(cmpd_tsv, out_tsv):
         cid_dict["Name"] = scrape_names_list(soup)
         print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"), compound, "names scraped")
 
-        #mapID and mID entries
-        cid_dict["mapIDs"], cid_dict["mIDs"] = scrape_metab_lists(soup)
+        #mapID, mID, and rID entries
+        cid_dict["mapIDs"], cid_dict["mIDs"], rxns = scrape_metab_lists(soup)
         print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"), compound, "mapIDs scraped")
         print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"), compound, "mIDs scraped")
-
-        #rID entries
-        rxns = scrape_rxn_list(soup)
         print(datetime.now().strftime("[%d/%m/%Y %H:%M:%S]:"), compound, "rIDs scraped")
+        
         if len(rxns) == 0:
             cid_dict["rIDs"] = {"NA":"NA"}
         else:
